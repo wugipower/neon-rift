@@ -1,0 +1,6 @@
+id,name,type,effect,value,price,desc
+i_potion_small,小型修复剂,consumable,heal_hp,60,30,回复60点生命
+i_potion_large,大型修复剂,consumable,heal_hp,150,80,回复150点生命
+i_ether_small,小型能量剂,consumable,heal_mp,30,35,回复30点能量
+i_ether_large,大型能量剂,consumable,heal_mp,80,90,回复80点能量
+i_revive,复苏针,consumable,revive,50,150,使战斗不能的队友以50%生命复活

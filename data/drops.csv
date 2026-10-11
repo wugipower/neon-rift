@@ -1,0 +1,17 @@
+drop_id,item_id,chance
+d_slime,i_potion_small,0.4
+d_bat,i_potion_small,0.3
+d_bat,i_ether_small,0.2
+d_turret,i_ether_small,0.4
+d_drone,i_potion_small,0.35
+d_drone,c_chip,0.10
+d_hound,i_potion_large,0.3
+d_hound,w_battery_baton,0.12
+d_warden,a_vest,0.6
+d_warden,i_potion_large,1.0
+d_shade,i_ether_large,0.4
+d_shade,c_core,0.10
+d_crystal,i_potion_large,0.4
+d_crystal,w_arc_wand,0.12
+d_core,w_focus_blade,1.0
+d_core,c_core,1.0

@@ -1,0 +1,9 @@
+attacker_element,defender_element,multiplier
+电,水,1.5
+水,电,0.75
+水,火,1.5
+火,水,0.75
+火,冰,1.5
+冰,火,0.75
+冰,电,1.5
+电,冰,0.75

@@ -1,0 +1,10 @@
+id,name,element,level,hp,mp,atk,matk,def,spd,crit,exp_reward,gold_reward,drop_id,skills
+e_slime,裂隙黏体,无,3,60,20,14,8,6,8,3,30,15,d_slime,e_bite
+e_bat,异化蝠,电,4,55,25,16,10,5,14,5,40,18,d_bat,e_bite|e_spark
+e_turret,失控炮台,火,5,80,40,12,18,10,6,3,55,25,d_turret,e_fire_breath
+e_drone,巡逻无人机,电,6,95,40,20,14,12,12,5,70,30,d_drone,e_bite|e_spark
+e_hound,裂变猎犬,火,7,110,40,26,12,12,16,6,90,35,d_hound,e_bite|e_fire_breath
+e_warden,屋顶守卫者,冰,9,280,80,30,24,20,10,6,260,120,d_warden,e_ice_shard|e_frost_nova|e_enrage
+e_shade,裂隙之影,无,10,140,60,32,28,16,18,8,130,50,d_shade,e_bite|e_void
+e_crystal,共鸣水晶,冰,11,170,90,24,36,22,8,4,150,55,d_crystal,e_ice_shard|e_heal
+e_rift_core,裂隙核心,无,13,650,150,42,48,28,14,8,1200,600,d_core,b_rift_slash|b_void_burst|e_enrage|e_heal

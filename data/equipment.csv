@@ -1,0 +1,9 @@
+id,name,slot,main_stat,main_value,sub_stat,sub_value,price,desc
+w_battery_baton,电磁警棍,weapon,atk,6,none,0,120,基础近战武器
+w_focus_blade,聚焦刃,weapon,atk,12,crit,3,400,高攻击并提升暴击率
+w_arc_wand,电弧权杖,weapon,matk,14,none,0,480,提升异能攻击
+a_jacket,强化夹克,armor,def,5,none,0,100,基础护甲
+a_vest,纤维护甲,armor,def,10,hp,20,380,兼顾生命上限的护甲
+c_chip,速度芯片,accessory,spd,6,none,0,150,提升行动速度
+c_core,灵能核心,accessory,matk,8,mp,15,350,提升异能与能量上限
+c_guard,守护挂坠,accessory,hp,40,none,0,300,大幅提升生命上限

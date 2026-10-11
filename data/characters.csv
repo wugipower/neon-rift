@@ -1,0 +1,4 @@
+id,name,role,element,base_vit,base_str,base_int,base_agi,grow_vit,grow_str,grow_int,grow_agi,start_skills
+lin,凛,均衡输出,电,10,12,10,11,2.0,2.2,1.8,1.8,s_thunder_strike|s_spark_burst|s_focus
+cang,苍,坦克前排,冰,15,11,6,7,3.0,2.0,0.8,1.0,s_ice_slam|s_frost_armor
+miao,澪,灵能辅助,水,7,6,15,10,1.2,0.6,3.0,1.6,s_aqua_lance|s_heal|s_regen
