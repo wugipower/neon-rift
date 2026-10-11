@@ -3,6 +3,7 @@ extends Node
 ## 资源为 tools/gen_audio.py 程序化合成的 WAV（assets/audio/），零版权风险。
 
 var _bgm: AudioStreamPlayer
+var _voice: AudioStreamPlayer
 var _sfx_pool: Array = []
 var _current_bgm: String = ""
 
@@ -11,6 +12,9 @@ func _ready() -> void:
 	_bgm = AudioStreamPlayer.new()
 	_bgm.volume_db = -6.0
 	add_child(_bgm)
+	_voice = AudioStreamPlayer.new()
+	_voice.volume_db = 0.0   # 语音最优先，响一点
+	add_child(_voice)
 	for i in 6:
 		var p := AudioStreamPlayer.new()
 		p.volume_db = -3.0
@@ -22,6 +26,8 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if _bgm != null:
 		_bgm.stop()
+	if _voice != null:
+		_voice.stop()
 	for p in _sfx_pool:
 		p.stop()
 
@@ -50,6 +56,25 @@ func play_sfx(track: String) -> void:
 			p.stream = stream
 			p.play()
 			return
+
+
+## 角色语音：assets/audio/vo/vo_<uid>_<n>.wav，多条随机播一条；播放时压低 BGM
+func play_voice(uid: String) -> void:
+	var picks: Array = []
+	for i in range(1, 5):
+		var path := "res://assets/audio/vo/vo_%s_%d.wav" % [uid, i]
+		if ResourceLoader.exists(path):
+			picks.append(path)
+	if picks.size() == 0:
+		return
+	var stream: AudioStream = load(picks[randi() % picks.size()])
+	if stream == null:
+		return
+	_voice.stream = stream
+	_voice.play()
+	if _bgm.playing:
+		_bgm.volume_db = -12.0
+		_voice.finished.connect(func(): _bgm.volume_db = -6.0)
 
 
 func _load_stream(track: String) -> AudioStream:

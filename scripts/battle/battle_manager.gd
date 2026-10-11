@@ -121,16 +121,15 @@ func _make_view(unit: Unit, pos: Vector2, is_enemy: bool) -> Dictionary:
 	body.size = Vector2(110, 90)
 	body.modulate = color
 	var base_mod: Color = color
-	if not is_enemy:
-		# P7：我方显示立绘（有图时不再用元素色块）
-		var tex: Texture2D = NeonTheme.load_tex("res://assets/art/portrait_%s.png" % unit.uid)
-		if tex != null:
-			body.icon = tex
-			body.expand_icon = true
-			body.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			body.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
-			base_mod = Color(1, 1, 1)
-			body.modulate = base_mod
+	# P7f：我方与敌方均优先显示头像（有图时不再用元素色块）
+	var tex: Texture2D = NeonTheme.load_tex("res://assets/art/portrait_%s.png" % unit.uid)
+	if tex != null:
+		body.icon = tex
+		body.expand_icon = true
+		body.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		body.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+		base_mod = Color(1, 1, 1)
+		body.modulate = base_mod
 	root.add_child(body)
 
 	var tag := Label.new()
@@ -448,6 +447,7 @@ func _add_skill_button(label: String, skill: Dictionary, actor: Unit, col: int) 
 
 
 func _on_skill_pressed(skill: Dictionary, actor: Unit) -> void:
+	AudioManager.play_sfx("sfx_select")
 	_chosen_skill = skill
 	var tgt: String = skill.get("target", "enemy_one")
 	if tgt == "enemy_one" or tgt == "ally_one":
@@ -535,6 +535,9 @@ func _render(ev: Dictionary) -> void:
 
 	var skill: Dictionary = ev["skill"]
 	var sname: String = skill.get("name", "攻击")
+	# P7f：玩家施放需要耗蓝的异能时喊出角色语音（普攻/道具不触发）
+	if logic.players.has(actor) and not ev.has("item_kind") and int(skill.get("mp_cost", 0)) > 0:
+		AudioManager.play_voice(actor.uid)
 	# P7：元素技能闪屏
 	var elem: String = skill.get("element", "无")
 	if ELEMENT_COLOR.has(elem) and elem != "无":
