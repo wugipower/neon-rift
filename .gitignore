@@ -10,3 +10,6 @@
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# ImageGen 中间产物（已整理进 assets/art，不入库）
+/vibe_images/

@@ -45,6 +45,10 @@ func _ready() -> void:
 	foot.add_theme_color_override("font_color", Color(0.4, 0.45, 0.55))
 	add_child(foot)
 
+	NeonTheme.apply_tree(self)
+	NeonTheme.add_bg_image(self, "res://assets/art/bg_rooftop.png", 0.35)
+	AudioManager.play_bgm("bgm_menu")
+
 
 func _add_button(text: String, pos: Vector2, cb: Callable) -> Button:
 	var b := Button.new()

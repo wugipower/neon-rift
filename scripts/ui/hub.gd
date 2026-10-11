@@ -61,6 +61,9 @@ func _ready() -> void:
 
 	_build_shop_panel()
 	_refresh()
+	NeonTheme.apply_tree(self)
+	NeonTheme.add_bg_image(self, "res://assets/art/bg_office.png", 0.30)
+	AudioManager.play_bgm("bgm_menu")
 
 
 func _btn(text: String, pos: Vector2, cb: Callable) -> Button:
@@ -184,6 +187,7 @@ func _refresh_shop() -> void:
 			eb.pressed.connect(_equip.bind(String(m["id"]), String(eid)))
 			hbox2.add_child(eb)
 		_owned_list.add_child(hbox2)
+	NeonTheme.apply_tree(self)
 
 
 func _wearer_of(equip_id: String) -> String:

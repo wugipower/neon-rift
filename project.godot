@@ -21,6 +21,7 @@ config/icon="res://icon.svg"
 DataManager="*res://autoload/data_manager.gd"
 GameState="*res://autoload/game_state.gd"
 SceneLoader="*res://autoload/scene_loader.gd"
+AudioManager="*res://autoload/audio_manager.gd"
 
 [display]
 

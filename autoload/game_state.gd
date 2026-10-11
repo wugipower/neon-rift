@@ -184,6 +184,15 @@ func item_count(item_id: String) -> int:
 	return int(items.get(item_id, 0))
 
 
+## P7：战斗内消耗一个道具；库存不足返回 false
+func consume_item(item_id: String) -> bool:
+	var n: int = item_count(item_id)
+	if n <= 0:
+		return false
+	items[item_id] = n - 1
+	return true
+
+
 func price_of(kind: String, ref_id: String) -> int:
 	if kind == "item":
 		return int(DataManager.get_item(ref_id).get("price", 0))

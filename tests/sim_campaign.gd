@@ -20,14 +20,14 @@ func _ready() -> void:
 			for e in String(node.get("enemies", "")).split("|"):
 				if e.strip_edges() != "":
 					enemy_ids.append(e.strip_edges())
-			var win: bool = _fight(enemy_ids)
+			var r: Dictionary = _fight(enemy_ids)
 			var plvl: Array = []
 			for m in GameState.party:
 				plvl.append("%s%d" % [String(m["id"])[0], int(m["level"])])
-			print("  [%s] %-14s 敌:%-22s → %s  队伍Lv %s 金%d" % [
+			print("  [%s] %-14s 敌:%-22s → %s  回合%2d 最低血线%3d%% 死亡%d 队伍Lv %s" % [
 				ntype, String(node.get("name", nid)), "|".join(enemy_ids),
-				"胜" if win else "负", "/".join(plvl), GameState.gold])
-			if not win:
+				"胜" if r.win else "负", int(r.rounds), int(round(r.min_pct * 100.0)), int(r.deaths), "/".join(plvl)])
+			if not r.win:
 				lost = nid
 				break
 			GameState.apply_battle_reward(enemy_ids)
@@ -50,12 +50,15 @@ func _ready() -> void:
 		get_tree().quit(1)
 
 
-## 打一场战斗，返回是否玩家胜
-func _fight(enemy_ids: Array) -> bool:
+## 打一场战斗，返回 {win, rounds, min_pct(全队最低血线), deaths(死亡人数)}，供难度曲线分析
+func _fight(enemy_ids: Array) -> Dictionary:
 	var party: Array = GameState.build_party_units()
 	var foes: Array = GameState.build_enemy_units(enemy_ids)
 	var b := BattleLogic.new(party, foes)
 	var g := 0
+	var min_pct := 1.0
+	var deaths := 0
+	var dead_seen := {}
 	while not b.over and g < 400:
 		var actor: Unit = b.current_actor()
 		if actor != null and b.is_player_actor(actor):
@@ -63,7 +66,14 @@ func _fight(enemy_ids: Array) -> bool:
 			b.set_player_action(sk)
 		b.step()
 		g += 1
-	return b.winner == "player"
+		for u in party:
+			var pct: float = float(u.hp) / float(u.hp_max)
+			if pct < min_pct:
+				min_pct = pct
+			if not u.is_alive() and not dead_seen.has(u.uid):
+				dead_seen[u.uid] = true
+				deaths += 1
+	return {"win": b.winner == "player", "rounds": b.round_num, "min_pct": min_pct, "deaths": deaths}
 
 
 ## 简单自动策略：队友残血且有治疗技能→治疗；否则放第一个能用的伤害技能；再否则普攻

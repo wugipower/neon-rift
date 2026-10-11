@@ -17,12 +17,23 @@ const ELEMENT_COLOR := {
 	"无": Color(0.7, 0.7, 0.75),
 }
 
+# P7：章节 → 战斗背景图
+const BG_BY_CHAPTER := {
+	0: "bg_office",
+	1: "bg_subway",
+	2: "bg_rooftop",
+	3: "bg_rift",
+}
+
 var logic: BattleLogic
 var views := {}              # Unit -> 视图引用字典
 var _status: Label
 var _log_label: Label
 var _skill_bar: Control
+var _flash_layer: ColorRect  # P7：元素闪屏层
+var _shaking: bool = false
 var _chosen_skill: Dictionary = {}
+var _chosen_item: String = ""   # P7：待使用的道具 id
 var _awaiting_target: bool = false
 
 # 战役模式（从地图进入）：结算奖励/推进节点；否则为独立试玩 demo
@@ -83,6 +94,17 @@ func _build_ui() -> void:
 	restart.pressed.connect(func(): get_tree().reload_current_scene())
 	add_child(restart)
 
+	# P7：元素闪屏层（最上层、不拦鼠标）
+	_flash_layer = ColorRect.new()
+	_flash_layer.color = Color(1, 1, 1, 0.16)
+	_flash_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash_layer.set_offsets_preset(Control.PRESET_FULL_RECT)
+	_flash_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flash_layer.modulate.a = 0.0
+	add_child(_flash_layer)
+
+	NeonTheme.apply_tree(self)
+
 
 ## 创建一个战斗单位的占位视图（body 为可点击按钮，用于选目标）
 func _make_view(unit: Unit, pos: Vector2, is_enemy: bool) -> Dictionary:
@@ -98,6 +120,17 @@ func _make_view(unit: Unit, pos: Vector2, is_enemy: bool) -> Dictionary:
 	body.position = Vector2(55, 0)
 	body.size = Vector2(110, 90)
 	body.modulate = color
+	var base_mod: Color = color
+	if not is_enemy:
+		# P7：我方显示立绘（有图时不再用元素色块）
+		var tex: Texture2D = NeonTheme.load_tex("res://assets/art/portrait_%s.png" % unit.uid)
+		if tex != null:
+			body.icon = tex
+			body.expand_icon = true
+			body.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			body.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+			base_mod = Color(1, 1, 1)
+			body.modulate = base_mod
 	root.add_child(body)
 
 	var tag := Label.new()
@@ -158,7 +191,7 @@ func _make_view(unit: Unit, pos: Vector2, is_enemy: bool) -> Dictionary:
 
 	return {"root": root, "body": body, "name_label": name_label, "hp_bar": hp_bar,
 			"hp_text": hp_text, "mp_bar": mp_bar, "status_label": status_label,
-			"color": color, "is_enemy": is_enemy}
+			"color": base_mod, "is_enemy": is_enemy}
 
 
 # ---------------- 战斗流程 ----------------
@@ -180,6 +213,9 @@ func _start_battle() -> void:
 	else:
 		# 独立试玩 demo（双击 run_battle.bat）
 		_campaign = false
+		if GameState.items.is_empty():
+			# demo 也给一点消耗品，便于展示「道具」指令
+			GameState.items = {"i_potion_small": 3, "i_ether_small": 2, "i_revive": 1}
 		for i in PARTY.size():
 			party.append(Unit.from_character(DataManager.get_character(PARTY[i]), PLAYER_LEVEL))
 		for i in FOES.size():
@@ -193,8 +229,17 @@ func _start_battle() -> void:
 
 	logic = BattleLogic.new(party, foes)
 	var title: String = "遭遇战"
+	var chapter: int = 2
+	var ntype: String = ""
 	if _campaign:
-		title = String(DataManager.get_node_data(_node_id).get("name", "遭遇战"))
+		var nd: Dictionary = DataManager.get_node_data(_node_id)
+		title = String(nd.get("name", "遭遇战"))
+		chapter = int(nd.get("chapter", 0))
+		ntype = String(nd.get("type", ""))
+	# P7：章节背景图 + 按遭遇类型切 BGM
+	NeonTheme.add_bg_image(self, "res://assets/art/%s.png" % BG_BY_CHAPTER.get(chapter, "bg_rooftop"), 0.30)
+	move_child(_flash_layer, -1)
+	AudioManager.play_bgm("bgm_boss" if ntype == "boss" else "bgm_battle")
 	_set_log("战斗开始！%s　我方 %d vs 敌方 %d" % [title, party.size(), foes.size()])
 	_run()
 
@@ -231,6 +276,7 @@ func _run() -> void:
 func _on_victory() -> void:
 	_status.text = "战斗结束：你赢了！"
 	_append_log(">> 玩家获胜，用了 %d 回合" % logic.round_num)
+	AudioManager.play_sfx("sfx_victory")
 	if not _campaign:
 		return
 	var reward: Dictionary = GameState.apply_battle_reward(_enemy_ids)
@@ -257,6 +303,7 @@ func _on_victory() -> void:
 func _on_defeat() -> void:
 	_status.text = "战斗结束：你被击败了…"
 	_append_log(">> 敌方获胜")
+	AudioManager.play_sfx("sfx_defeat")
 	if not _campaign:
 		return
 	GameState.pending_node = ""
@@ -268,6 +315,7 @@ func _show_result_panel(text: String, btn_label: String, cb: Callable) -> void:
 	panel.position = Vector2(340, 210)
 	panel.size = Vector2(600, 280)
 	add_child(panel)
+	NeonTheme.style_panel(panel)
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.position = Vector2(24, 24)
@@ -282,6 +330,7 @@ func _show_result_panel(text: String, btn_label: String, cb: Callable) -> void:
 	b.position = Vector2(200, 210)
 	b.size = Vector2(200, 52)
 	b.add_theme_font_size_override("font_size", 18)
+	NeonTheme.style_button(b, true)
 	b.pressed.connect(cb)
 	panel.add_child(b)
 
@@ -290,6 +339,7 @@ func _show_result_panel(text: String, btn_label: String, cb: Callable) -> void:
 func _prompt_skills(actor: Unit) -> void:
 	_clear_skills()
 	_chosen_skill = {}
+	_chosen_item = ""
 	_awaiting_target = false
 	_status.text = "轮到 %s：选择技能" % actor.display_name
 	_highlight(actor, true)
@@ -308,6 +358,76 @@ func _prompt_skills(actor: Unit) -> void:
 			continue
 		_add_skill_button("%s(%d)" % [sk.get("name", sid), int(sk.get("mp_cost", 0))], sk, actor, col)
 		col += 1
+	# 道具指令（P7）
+	_add_item_button(actor, col)
+
+
+## P7：道具按钮——点开显示库存消耗品清单
+func _add_item_button(actor: Unit, col: int) -> void:
+	var b := Button.new()
+	b.text = "道具"
+	b.position = Vector2(col * 122, 0)
+	b.size = Vector2(116, 44)
+	b.add_theme_font_size_override("font_size", 14)
+	NeonTheme.style_button(b)
+	var owned: Array = _owned_items()
+	if owned.is_empty():
+		b.disabled = true
+		b.tooltip_text = "没有消耗品"
+	else:
+		b.tooltip_text = "使用消耗品（占用本回合）"
+	b.pressed.connect(_on_item_pressed.bind(actor))
+	_skill_bar.add_child(b)
+
+
+func _owned_items() -> Array:
+	var out: Array = []
+	for k in GameState.items:
+		if int(GameState.items[k]) > 0:
+			out.append(String(k))
+	return out
+
+
+## 技能条换成道具清单 + 返回按钮
+func _on_item_pressed(actor: Unit) -> void:
+	_clear_skills()
+	_chosen_skill = {}
+	_chosen_item = ""
+	_awaiting_target = false
+	_status.text = "%s：选择要使用的道具" % actor.display_name
+	var col := 0
+	for id in _owned_items():
+		var idef: Dictionary = DataManager.get_item(id)
+		var b := Button.new()
+		b.text = "%s x%d" % [idef.get("name", id), GameState.item_count(id)]
+		b.position = Vector2(col * 152, 0)
+		b.size = Vector2(146, 44)
+		b.add_theme_font_size_override("font_size", 13)
+		b.tooltip_text = String(idef.get("desc", ""))
+		NeonTheme.style_button(b)
+		b.pressed.connect(_on_item_chosen.bind(id, actor))
+		_skill_bar.add_child(b)
+		col += 1
+	var back := Button.new()
+	back.text = "返回"
+	back.position = Vector2(col * 152, 0)
+	back.size = Vector2(90, 44)
+	back.add_theme_font_size_override("font_size", 13)
+	NeonTheme.style_button(back)
+	back.pressed.connect(func(): _prompt_skills(actor))
+	_skill_bar.add_child(back)
+
+
+func _on_item_chosen(item_id: String, actor: Unit) -> void:
+	_chosen_item = item_id
+	_chosen_skill = {}
+	_awaiting_target = true
+	var idef: Dictionary = DataManager.get_item(item_id)
+	var kind: String = String(idef.get("effect", ""))
+	_status.text = "%s：点击一名队友使用 %s%s" % [
+		actor.display_name, idef.get("name", item_id),
+		"（战斗不能）" if kind == "revive" else ""]
+	_mark_targets(actor, "item")
 
 
 func _add_skill_button(label: String, skill: Dictionary, actor: Unit, col: int) -> void:
@@ -316,6 +436,7 @@ func _add_skill_button(label: String, skill: Dictionary, actor: Unit, col: int) 
 	b.position = Vector2(col * 122, 0)
 	b.size = Vector2(116, 44)
 	b.add_theme_font_size_override("font_size", 14)
+	NeonTheme.style_button(b)
 	var cost: int = int(skill.get("mp_cost", 0))
 	if actor.mp < cost:
 		b.disabled = true
@@ -343,6 +464,18 @@ func _on_unit_clicked(unit: Unit) -> void:
 	var actor: Unit = logic.current_actor()
 	if actor == null or not logic.is_player_actor(actor):
 		return
+	if _chosen_item != "":
+		# 道具：校验目标 → 扣库存 → 提交
+		if not _is_valid_target(actor, unit, "item"):
+			return
+		if not GameState.consume_item(_chosen_item):
+			return
+		_awaiting_target = false
+		logic.set_player_item(_chosen_item, unit)
+		_chosen_item = ""
+		_status.text = ""
+		player_committed.emit()
+		return
 	var tgt: String = _chosen_skill.get("target", "enemy_one")
 	if not _is_valid_target(actor, unit, tgt):
 		return
@@ -350,6 +483,13 @@ func _on_unit_clicked(unit: Unit) -> void:
 
 
 func _is_valid_target(actor: Unit, unit: Unit, tgt: String) -> bool:
+	if tgt == "item":
+		if not logic.players.has(unit):
+			return false
+		var kind: String = String(DataManager.get_item(_chosen_item).get("effect", ""))
+		if kind == "revive":
+			return not unit.is_alive()
+		return unit.is_alive()
 	if not unit.is_alive():
 		return false
 	if tgt == "enemy_one":
@@ -395,6 +535,10 @@ func _render(ev: Dictionary) -> void:
 
 	var skill: Dictionary = ev["skill"]
 	var sname: String = skill.get("name", "攻击")
+	# P7：元素技能闪屏
+	var elem: String = skill.get("element", "无")
+	if ELEMENT_COLOR.has(elem) and elem != "无":
+		_screen_flash(ELEMENT_COLOR[elem])
 	for e in ev["result"]["events"]:
 		var target: Unit = e["target"]
 		var tv: Dictionary = views[target]
@@ -404,7 +548,14 @@ func _render(ev: Dictionary) -> void:
 			continue
 		if e.get("is_heal", false):
 			_float_text(tv, "+%d" % int(e["damage"]), Color(0.4, 1.0, 0.5))
-			_append_log("%s 用 %s 治疗 %s %d 点" % [actor.display_name, sname, target.display_name, int(e["damage"])])
+			AudioManager.play_sfx("sfx_heal")
+			var ik: String = ev.get("item_kind", "")
+			if ik == "revive":
+				_append_log("%s 用 %s 复活 %s，回复 %d 点生命" % [actor.display_name, sname, target.display_name, int(e["damage"])])
+			elif ik == "heal_mp":
+				_append_log("%s 用 %s 为 %s 回复 %d 点能量" % [actor.display_name, sname, target.display_name, int(e["damage"])])
+			else:
+				_append_log("%s 用 %s 治疗 %s %d 点" % [actor.display_name, sname, target.display_name, int(e["damage"])])
 		else:
 			var res: Dictionary = e.get("result", {})
 			var txt := "-%d" % int(e["damage"])
@@ -413,6 +564,10 @@ func _render(ev: Dictionary) -> void:
 				txt += " 暴击!"
 			_float_text(tv, txt, Color(1.0, 0.85, 0.2) if crit else Color(1.0, 0.4, 0.35))
 			_flash(tv["body"])
+			_lunge(views[actor], tv)
+			AudioManager.play_sfx("sfx_crit" if crit else "sfx_hit")
+			if crit or target.hp_max >= 500:
+				_shake(9.0 if crit else 6.0)
 			var extra := ""
 			if res.has("element_mult") and absf(float(res["element_mult"]) - 1.0) > 0.01:
 				extra = "（元素x%.2f）" % float(res["element_mult"])
@@ -456,10 +611,10 @@ func _highlight(unit: Unit, on: bool) -> void:
 	v["body"].modulate = (v["color"] * Color(1.6, 1.6, 1.6)) if on else v["color"]
 
 
-## 单体技能选目标时，高亮合法目标
+## 单体技能/道具选目标时，高亮合法目标（复活道具高亮倒下的队友）
 func _mark_targets(actor: Unit, tgt: String) -> void:
 	for unit in views:
-		if not unit.is_alive():
+		if tgt != "item" and not unit.is_alive():
 			continue
 		var valid: bool = _is_valid_target(actor, unit, tgt)
 		var v: Dictionary = views[unit]
@@ -499,6 +654,38 @@ func _flash(body: Button) -> void:
 	var tw := create_tween()
 	tw.tween_property(body, "modulate", Color(3, 3, 3), 0.08)
 	tw.tween_property(body, "modulate", base, 0.15)
+
+
+# ---------------- P7 战斗特效 ----------------
+
+## 元素色全屏轻闪（0.16 透明度淡出）
+func _screen_flash(color: Color) -> void:
+	_flash_layer.color = Color(color.r, color.g, color.b, 0.16)
+	_flash_layer.modulate.a = 1.0
+	var tw := create_tween()
+	tw.tween_property(_flash_layer, "modulate:a", 0.0, 0.35)
+
+
+## 屏幕震动：暴击/打到 Boss 时给冲击感
+func _shake(amp: float) -> void:
+	if _shaking:
+		return
+	_shaking = true
+	var tw := create_tween()
+	for i in 4:
+		tw.tween_property(self, "position", Vector2(randf_range(-amp, amp), randf_range(-amp, amp)), 0.05)
+	tw.tween_property(self, "position", Vector2.ZERO, 0.06)
+	tw.tween_callback(func(): _shaking = false)
+
+
+## 攻击者朝目标前冲一小步再回位
+func _lunge(from_v: Dictionary, to_v: Dictionary) -> void:
+	var from_r: Control = from_v["root"]
+	var dir: Vector2 = (to_v["root"].position - from_r.position).normalized()
+	var base: Vector2 = from_r.position
+	var tw := create_tween()
+	tw.tween_property(from_r, "position", base + dir * 26.0, 0.12)
+	tw.tween_property(from_r, "position", base, 0.18)
 
 
 func _set_log(text: String) -> void:

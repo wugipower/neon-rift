@@ -88,14 +88,17 @@ func _test_derive() -> void:
 
 func _test_enemy() -> void:
 	print("-- 3. 敌人加载 --")
-	var e: Unit = Unit.from_enemy(DataManager.get_enemy("e_slime"))
-	_eqi("裂隙黏体 HP", e.hp_max, 60)
-	_eqf("裂隙黏体 ATK", e.atk, 14.0)
-	_eqf("裂隙黏体 DEF", e.def, 6.0)
+	# P7a 起数值会持续调优：断言改为「以 CSV 为准」，验证 CSV→Unit 链路而非具体数字
+	var row: Dictionary = DataManager.get_enemy("e_slime")
+	var e: Unit = Unit.from_enemy(row)
+	_eqi("裂隙黏体 HP", e.hp_max, int(row.get("hp", 0)))
+	_eqf("裂隙黏体 ATK", e.atk, float(row.get("atk", 0)))
+	_eqf("裂隙黏体 DEF", e.def, float(row.get("def", 0)))
 	_true("敌人 is_enemy=true", e.is_enemy)
 	_true("敌人元素=无", e.element == "无")
-	var boss: Unit = Unit.from_enemy(DataManager.get_enemy("e_rift_core"))
-	_eqi("最终Boss HP", boss.hp_max, 650)
+	var core_row: Dictionary = DataManager.get_enemy("e_rift_core")
+	var boss: Unit = Unit.from_enemy(core_row)
+	_eqi("最终Boss HP", boss.hp_max, int(core_row.get("hp", 0)))
 
 
 func _test_element() -> void:

@@ -24,6 +24,7 @@ var log: Array = []
 # 玩家指令（由 UI 在 step 前设置；未设置则默认普攻，便于无头模拟）
 var pending_skill: Dictionary = {}
 var pending_target: Unit = null
+var pending_item: String = ""   # P7：道具指令（消耗库存、占一回合）
 
 
 func _init(p_units: Array, e_units: Array) -> void:
@@ -35,6 +36,12 @@ func _init(p_units: Array, e_units: Array) -> void:
 ## UI/测试在玩家回合调用，指定本次要放的技能与目标
 func set_player_action(skill: Dictionary, target: Unit = null) -> void:
 	pending_skill = skill
+	pending_target = target
+
+
+## P7：玩家回合使用道具（回血/回蓝/复活），目标为队友
+func set_player_item(item_id: String, target: Unit) -> void:
+	pending_item = item_id
 	pending_target = target
 
 
@@ -113,7 +120,15 @@ func step() -> Dictionary:
 		idx += 1
 		return sev
 
-	# 3) 选择技能
+	# 3) 玩家道具指令：消耗库存、占一回合（P7）
+	if is_player_actor(actor) and pending_item != "":
+		var iev: Dictionary = _exec_item(actor, tick, expired)
+		log.append(iev)
+		idx += 1
+		_check_over()
+		return iev
+
+	# 4) 选择技能
 	var skill: Dictionary
 	var explicit_target: Unit = null
 	if is_player_actor(actor):
@@ -131,7 +146,7 @@ func step() -> Dictionary:
 	if not SkillExecutor.can_cast(actor, skill):
 		skill = DamageCalc.basic_attack(actor)
 
-	# 4) 结算
+	# 5) 结算
 	var res: Dictionary = SkillExecutor.cast(
 		actor, skill, allies_of(actor), foes_of(actor), explicit_target)
 	var ev := {"type": "action", "actor": actor, "skill": skill, "result": res,
@@ -140,3 +155,30 @@ func step() -> Dictionary:
 	idx += 1
 	_check_over()
 	return ev
+
+
+## 结算道具效果，返回与技能同构的 action 事件（item_kind 标记用途）
+func _exec_item(actor: Unit, tick: Dictionary, expired: Array) -> Dictionary:
+	var idef: Dictionary = DataManager.get_item(pending_item)
+	var kind: String = String(idef.get("effect", ""))
+	var value: int = int(idef.get("value", 0))
+	var target: Unit = pending_target if pending_target != null else actor
+	var amount := 0
+	if kind == "heal_hp":
+		amount = mini(target.hp_max - target.hp, value)
+		target.hp += amount
+	elif kind == "heal_mp":
+		amount = mini(target.mp_max - target.mp, value)
+		target.mp += amount
+	elif kind == "revive":
+		amount = int(round(float(target.hp_max) * float(value) / 100.0))
+		target.hp = amount
+	var item_id: String = pending_item
+	pending_item = ""
+	pending_target = null
+	return {"type": "action", "actor": actor, "item_id": item_id, "item_kind": kind,
+			"skill": {"name": String(idef.get("name", item_id)), "mp_cost": 0,
+					  "target": "ally_one", "element": "无"},
+			"result": {"events": [{"target": target, "damage": amount, "is_heal": true,
+								   "applied": false, "died": false, "status": ""}]},
+			"tick": tick, "expired": expired, "round": round_num}

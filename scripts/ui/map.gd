@@ -64,6 +64,8 @@ func _ready() -> void:
 	add_child(_node_layer)
 
 	_refresh()
+	NeonTheme.apply_tree(self)
+	AudioManager.play_bgm("bgm_menu")
 
 
 func _refresh() -> void:
@@ -78,6 +80,7 @@ func _refresh() -> void:
 
 	for id in DataManager.node_order:
 		_make_node_button(String(id))
+	NeonTheme.apply_tree(self)
 
 
 func _make_node_button(id: String) -> void:
@@ -155,3 +158,4 @@ func _show_ending() -> void:
 	back.add_theme_font_size_override("font_size", 18)
 	back.pressed.connect(func(): SceneLoader.goto_menu())
 	panel.add_child(back)
+	NeonTheme.apply_tree(self)

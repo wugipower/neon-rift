@@ -62,6 +62,7 @@ func _ready() -> void:
 		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	gui_input.connect(_on_gui_input)
+	NeonTheme.apply_tree(self)
 
 	if _lines.is_empty():
 		finished.emit()

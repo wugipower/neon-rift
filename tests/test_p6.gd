@@ -109,20 +109,23 @@ func _test_full_playthrough() -> void:
 # ---------- 5. 战斗奖励与升级 ----------
 func _test_battle_reward() -> void:
 	print("-- 5. 战斗奖励：经验/金钱/升级 --")
+	# P7a 起经验/金钱会持续调优：断言以 enemies.csv 为准，验证奖励链路而非具体数字
 	GameState.new_game()
+	var slime: Dictionary = DataManager.get_enemy("e_slime")
 	var gold0: int = GameState.gold
 	var r: Dictionary = GameState.apply_battle_reward(["e_slime"])
-	_eqi("黏体经验30", int(r["exp"]), 30)
-	_eqi("黏体金钱15", int(r["gold"]), 15)
-	_eqi("金钱累加", GameState.gold, gold0 + 15)
+	_eqi("黏体经验与CSV一致", int(r["exp"]), int(slime.get("exp_reward", 0)))
+	_eqi("黏体金钱与CSV一致", int(r["gold"]), int(slime.get("gold_reward", 0)))
+	_eqi("金钱累加", GameState.gold, gold0 + int(slime.get("gold_reward", 0)))
 	_eqi("未升级仍3级", int(GameState.party[0]["level"]), 3)
-	_eqi("累积经验30", int(GameState.party[0]["exp"]), 30)
+	_eqi("累积经验入账", int(GameState.party[0]["exp"]), int(slime.get("exp_reward", 0)))
 
-	# 大额经验触发连升
+	# 大额经验触发连升（最终Boss）
 	GameState.new_game()
-	var r2: Dictionary = GameState.apply_battle_reward(["e_rift_core"])  # exp 1200
-	_eqi("核心经验1200", int(r2["exp"]), 1200)
-	_eqi("升到5级", int(GameState.party[0]["level"]), 5)
+	var core: Dictionary = DataManager.get_enemy("e_rift_core")
+	var r2: Dictionary = GameState.apply_battle_reward(["e_rift_core"])
+	_eqi("核心经验与CSV一致", int(r2["exp"]), int(core.get("exp_reward", 0)))
+	_true("Boss经验足以连升到5级以上", int(GameState.party[0]["level"]) > 5)
 	_true("有升级记录", r2["levelups"].size() == 3)
 
 
