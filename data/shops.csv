@@ -1,0 +1,12 @@
+shop_id,ref_kind,ref_id
+hub,item,i_potion_small
+hub,item,i_potion_large
+hub,item,i_ether_small
+hub,item,i_ether_large
+hub,item,i_revive
+hub,equip,w_battery_baton
+hub,equip,a_jacket
+hub,equip,c_chip
+hub,equip,w_focus_blade
+hub,equip,a_vest
+hub,equip,c_core

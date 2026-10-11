@@ -25,6 +25,11 @@ var _skill_bar: Control
 var _chosen_skill: Dictionary = {}
 var _awaiting_target: bool = false
 
+# 战役模式（从地图进入）：结算奖励/推进节点；否则为独立试玩 demo
+var _campaign: bool = false
+var _node_id: String = ""
+var _enemy_ids: Array = []
+
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -160,16 +165,35 @@ func _start_battle() -> void:
 	views.clear()
 	var party: Array = []
 	var foes: Array = []
-	for i in PARTY.size():
-		var u := Unit.from_character(DataManager.get_character(PARTY[i]), PLAYER_LEVEL)
-		party.append(u)
-		views[u] = _make_view(u, Vector2(60 + i * 130, 420), false)
-	for i in FOES.size():
-		var e := Unit.from_enemy(DataManager.get_enemy(FOES[i]))
-		foes.append(e)
-		views[e] = _make_view(e, Vector2(660 + i * 190, 120), true)
+	_enemy_ids = []
+
+	if GameState.started and GameState.pending_node != "":
+		# 战役模式：从 GameState 读取遭遇
+		_campaign = true
+		_node_id = GameState.pending_node
+		for e in GameState.pending_enemies:
+			_enemy_ids.append(String(e))
+		party = GameState.build_party_units()
+		foes = GameState.build_enemy_units(_enemy_ids)
+	else:
+		# 独立试玩 demo（双击 run_battle.bat）
+		_campaign = false
+		for i in PARTY.size():
+			party.append(Unit.from_character(DataManager.get_character(PARTY[i]), PLAYER_LEVEL))
+		for i in FOES.size():
+			_enemy_ids.append(FOES[i])
+			foes.append(Unit.from_enemy(DataManager.get_enemy(FOES[i])))
+
+	for i in party.size():
+		views[party[i]] = _make_view(party[i], Vector2(60 + i * 130, 420), false)
+	for i in foes.size():
+		views[foes[i]] = _make_view(foes[i], Vector2(600 + i * 200, 120), true)
+
 	logic = BattleLogic.new(party, foes)
-	_set_log("战斗开始！我方 Lv%d × %d  vs  敌方 × %d" % [PLAYER_LEVEL, party.size(), foes.size()])
+	var title: String = "遭遇战"
+	if _campaign:
+		title = String(DataManager.get_node_data(_node_id).get("name", "遭遇战"))
+	_set_log("战斗开始！%s　我方 %d vs 敌方 %d" % [title, party.size(), foes.size()])
 	_run()
 
 
@@ -197,11 +221,67 @@ func _run() -> void:
 
 	_clear_skills()
 	if logic.winner == "player":
-		_status.text = "战斗结束：你赢了！"
-		_append_log(">> 玩家获胜，用了 %d 回合" % logic.round_num)
+		_on_victory()
 	else:
-		_status.text = "战斗结束：你被击败了…"
-		_append_log(">> 敌方获胜")
+		_on_defeat()
+
+
+func _on_victory() -> void:
+	_status.text = "战斗结束：你赢了！"
+	_append_log(">> 玩家获胜，用了 %d 回合" % logic.round_num)
+	if not _campaign:
+		return
+	var reward: Dictionary = GameState.apply_battle_reward(_enemy_ids)
+	GameState.complete_node(_node_id)
+	GameState.save_game()          # 战斗胜利后自动存档
+	GameState.pending_node = ""
+
+	var txt := "战斗胜利！\n获得经验 %d · 金钱 %d G" % [int(reward["exp"]), int(reward["gold"])]
+	if reward["drops"].size() > 0:
+		var dnames: Array = []
+		for d in reward["drops"]:
+			dnames.append(String(DataManager.get_item(String(d)).get("name", d)))
+		txt += "\n掉落：" + "、".join(dnames)
+	if reward["levelups"].size() > 0:
+		var lus: Array = []
+		for lu in reward["levelups"]:
+			lus.append("%s → Lv%d" % [
+				DataManager.get_character(String(lu["id"])).get("name", lu["id"]), int(lu["level"])])
+		txt += "\n升级：" + "、".join(lus)
+	txt += "\n（已自动存档）"
+	_show_result_panel(txt, "继续 →地图", func(): SceneLoader.goto_map())
+
+
+func _on_defeat() -> void:
+	_status.text = "战斗结束：你被击败了…"
+	_append_log(">> 敌方获胜")
+	if not _campaign:
+		return
+	GameState.pending_node = ""
+	_show_result_panel("队伍被击败……\n返回据点休整（不会删档）。", "回据点", func(): SceneLoader.goto_hub())
+
+
+func _show_result_panel(text: String, btn_label: String, cb: Callable) -> void:
+	var panel := Panel.new()
+	panel.position = Vector2(340, 210)
+	panel.size = Vector2(600, 280)
+	add_child(panel)
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.position = Vector2(24, 24)
+	lbl.size = Vector2(552, 170)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.add_theme_font_size_override("font_size", 20)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.93, 0.6))
+	panel.add_child(lbl)
+	var b := Button.new()
+	b.text = btn_label
+	b.position = Vector2(200, 210)
+	b.size = Vector2(200, 52)
+	b.add_theme_font_size_override("font_size", 18)
+	b.pressed.connect(cb)
+	panel.add_child(b)
 
 
 ## 为当前玩家角色生成技能按钮

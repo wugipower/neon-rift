@@ -13,6 +13,14 @@ var equipment: Dictionary = {}
 var items: Dictionary = {}
 # status_id -> {name, kind, value, desc}
 var status_effects: Dictionary = {}
+# node_id -> 行字典（节点图）
+var nodes: Dictionary = {}
+# 节点在表中的先后顺序（用于线性推进参考）
+var node_order: Array = []
+# dialogue_id -> Array[{line:int, speaker:String, text:String}]（已按 line 排序）
+var dialogues: Dictionary = {}
+# shop_id -> Array[{kind:String, ref_id:String}]
+var shops: Dictionary = {}
 # level(int) -> {exp_to_next, exp_total}
 var levels: Dictionary = {}
 # enemy_id -> Array[{skill_id, weight, condition}]
@@ -72,9 +80,39 @@ func load_all() -> void:
 		var key: String = row["attacker_element"] + "|" + row["defender_element"]
 		elements[key] = float(row["multiplier"])
 
-	print("[DataManager] 加载完成  角色%d 技能%d 敌人%d 装备%d 消耗品%d 状态%d 等级%d AI组%d 掉落组%d 元素%d" % [
+	# 节点图：id 索引 + 顺序表
+	nodes = _index_by_id(_load_csv(DATA_DIR + "nodes.csv"), "id")
+	node_order.clear()
+	for row in _load_csv(DATA_DIR + "nodes.csv"):
+		if String(row.get("id", "")) != "":
+			node_order.append(String(row["id"]))
+
+	# 对话：按 id 分组，组内按 line 升序
+	dialogues.clear()
+	for row in _load_csv(DATA_DIR + "dialogues.csv"):
+		var did: String = row["id"]
+		if not dialogues.has(did):
+			dialogues[did] = []
+		dialogues[did].append({
+			"line": int(row["line"]),
+			"speaker": row["speaker"],
+			"text": row["text"],
+		})
+	for did2 in dialogues:
+		dialogues[did2].sort_custom(func(a, b): return int(a["line"]) < int(b["line"]))
+
+	# 商店：按 shop_id 分组
+	shops.clear()
+	for row in _load_csv(DATA_DIR + "shops.csv"):
+		var sid: String = row["shop_id"]
+		if not shops.has(sid):
+			shops[sid] = []
+		shops[sid].append({"kind": row["ref_kind"], "ref_id": row["ref_id"]})
+
+	print("[DataManager] 加载完成  角色%d 技能%d 敌人%d 装备%d 消耗品%d 状态%d 等级%d AI组%d 掉落组%d 元素%d 节点%d 对话%d 商店%d" % [
 		characters.size(), skills.size(), enemies.size(), equipment.size(),
-		items.size(), status_effects.size(), levels.size(), enemy_ai.size(), drops.size(), elements.size(),
+		items.size(), status_effects.size(), levels.size(), enemy_ai.size(), drops.size(),
+		elements.size(), nodes.size(), dialogues.size(), shops.size(),
 	])
 
 
@@ -104,6 +142,18 @@ func get_enemy_ai(enemy_id: String) -> Array:
 
 func get_drops(drop_id: String) -> Array:
 	return drops.get(drop_id, [])
+
+## 节点行字典（含 chapter/name/type/enemies/dialogue/next/flag/x/y）
+func get_node_data(id: String) -> Dictionary:
+	return nodes.get(id, {})
+
+## 对话：返回按 line 排好序的 Array[{speaker,text}]
+func get_dialogue(id: String) -> Array:
+	return dialogues.get(id, [])
+
+## 商店货架：Array[{kind, ref_id}]
+func get_shop(shop_id: String) -> Array:
+	return shops.get(shop_id, [])
 
 func get_exp_to_next(level: int) -> int:
 	if levels.has(level):

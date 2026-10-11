@@ -12,13 +12,15 @@ config_version=5
 
 config/name="霓虹裂隙 NeonRift"
 config/description="都市·二次元幻想题材 2D 回合制 RPG（秋招游戏策划作品）"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
 [autoload]
 
 DataManager="*res://autoload/data_manager.gd"
+GameState="*res://autoload/game_state.gd"
+SceneLoader="*res://autoload/scene_loader.gd"
 
 [display]
 

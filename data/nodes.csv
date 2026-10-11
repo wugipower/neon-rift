@@ -1,0 +1,16 @@
+id,chapter,name,type,enemies,dialogue,next,flag,x,y
+n_intro,0,事务所门口,story,,d_intro,n_tut,,140,90
+n_tut,0,教学战,battle,e_slime,,n_hub,,380,90
+n_hub,0,据点解锁,story,,d_unlock,n_c1a,hub_unlocked,620,90
+n_c1a,1,地铁站入口,battle,e_slime|e_bat,,n_c1b,,140,230
+n_c1b,1,废弃站台,story,,d_c1,n_c1c|n_c1side,,380,230
+n_c1side,1,记忆碎片·支线,story,,d_frag1,n_c1c,frag1,380,330
+n_c1c,1,隧道深处,battle,e_turret|e_bat,,n_c2a,,620,230
+n_c2a,2,商业区屋顶,battle,e_drone|e_hound,,n_c2b,,140,380
+n_c2b,2,霓虹广告牌,story,,d_c2,n_c2boss,,380,380
+n_c2boss,2,中Boss·屋顶守卫者,boss,e_warden,d_c2boss,n_c2c,,620,380
+n_c2c,2,屋顶另一端,battle,e_hound|e_drone,,n_c3a,,860,380
+n_c3a,3,裂隙外围,battle,e_shade|e_crystal,,n_c3b,,140,530
+n_c3b,3,扭曲边界,story,,d_c3,n_c3boss,,380,530
+n_c3boss,3,最终Boss·裂隙核心,boss,e_rift_core,d_finalboss,n_end,,620,530
+n_end,3,封印裂隙,ending,,d_ending,,finished,860,530
