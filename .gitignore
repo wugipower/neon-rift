@@ -1,0 +1,12 @@
+# Godot 4 缓存与导入文件（不入库，可自动重建）
+.godot/
+*.import
+
+# 导出的成品与临时文件
+/build/
+/export/
+*.tmp
+
+# 系统文件
+.DS_Store
+Thumbs.db
