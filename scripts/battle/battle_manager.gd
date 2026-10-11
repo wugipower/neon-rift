@@ -33,6 +33,7 @@ var _enemy_ids: Array = []
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
 	_start_battle()
 
@@ -43,6 +44,7 @@ func _build_ui() -> void:
 	var bg := ColorRect.new()
 	bg.color = Color(0.06, 0.07, 0.12)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
 	var title := Label.new()

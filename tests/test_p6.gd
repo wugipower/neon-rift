@@ -16,6 +16,7 @@ func _ready() -> void:
 	_test_shop()
 	_test_equip()
 	_test_save_load()
+	await _test_dialogue_box()
 	# 清理测试产生的存档，避免影响正式试玩的「继续」
 	SaveGame.delete()
 	print("===========================================")
@@ -189,3 +190,52 @@ func _test_save_load() -> void:
 	_true("剧情标记还原", GameState.has_flag("frag1"))
 	_eqs("当前节点还原", GameState.current_node, "n_hub")
 	_eqi("已完成数还原", GameState.completed.size(), 2)
+
+
+# ---------- 10. 对话框点击推进 ----------
+## 回归用例：曾出现 set_anchors_preset 不拉伸代码创建的控件，
+## 对话框根节点 0x0 → 全屏没有可点击区域 → "点击任意处继续"失效。
+func _test_dialogue_box() -> void:
+	print("-- 10. 对话框点击/按键推进 --")
+	var host := Control.new()
+	host.set_anchors_preset(Control.PRESET_FULL_RECT)
+	host.set_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(host)
+	await get_tree().process_frame
+
+	var lines: Array = [
+		{"speaker": "旁白", "text": "第一句"},
+		{"speaker": "旁白", "text": "第二句"},
+	]
+	var db := DialogueBox.new(lines)
+	host.add_child(db)
+	await get_tree().process_frame
+	_true("根节点铺满父级(有全屏点击区)", db.get_rect().size.x > 0 and db.get_rect().size == host.get_rect().size)
+
+	var st := {"done": false}
+	db.finished.connect(func(): st.done = true)
+
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = Vector2(640, 100)
+	db.gui_input.emit(click)
+	_true("点击推进到第2句", db.is_inside_tree() and db._i == 1)
+	db.gui_input.emit(click)
+	_true("第二次点击发出 finished", bool(st.done))
+	await get_tree().process_frame
+	_true("对话框自毁离树", not is_instance_valid(db) or not db.is_inside_tree())
+
+	# 键盘路径：空格/回车同样推进
+	var db2 := DialogueBox.new(lines)
+	host.add_child(db2)
+	await get_tree().process_frame
+	var key := InputEventKey.new()
+	key.keycode = KEY_SPACE
+	key.pressed = true
+	db2._unhandled_input(key)
+	_true("空格推进到第2句", db2.is_inside_tree() and db2._i == 1)
+	db2._unhandled_input(key)
+	await get_tree().process_frame
+	_true("空格结束自毁", not is_instance_valid(db2) or not db2.is_inside_tree())
+	host.queue_free()

@@ -32,6 +32,7 @@ var _cards := {}   # char_id -> { "title":Label, "meta":Label, "stats":{ key: La
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
 	_refresh_all(int(_level_spin.value))
 
@@ -41,11 +42,13 @@ func _build_ui() -> void:
 	var bg := ColorRect.new()
 	bg.color = Color(0.07, 0.08, 0.13)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
 	# 外层留白
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 28)
 	add_child(margin)

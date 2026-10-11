@@ -11,9 +11,11 @@ var _owned_list: VBoxContainer
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = Color(0.07, 0.07, 0.13)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
 	var title := Label.new()

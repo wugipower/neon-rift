@@ -17,11 +17,13 @@ func _init(lines: Array) -> void:
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.55)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 
@@ -53,6 +55,11 @@ func _ready() -> void:
 	hint.add_theme_font_size_override("font_size", 14)
 	hint.add_theme_color_override("font_color", Color(0.6, 0.65, 0.75))
 	panel.add_child(hint)
+
+	# 面板与文字不拦截鼠标，保证"点击任意处"都能落到根节点推进
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for c in panel.get_children():
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	gui_input.connect(_on_gui_input)
 
