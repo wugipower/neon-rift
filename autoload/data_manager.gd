@@ -11,6 +11,8 @@ var skills: Dictionary = {}
 var enemies: Dictionary = {}
 var equipment: Dictionary = {}
 var items: Dictionary = {}
+# status_id -> {name, kind, value, desc}
+var status_effects: Dictionary = {}
 # level(int) -> {exp_to_next, exp_total}
 var levels: Dictionary = {}
 # enemy_id -> Array[{skill_id, weight, condition}]
@@ -32,6 +34,7 @@ func load_all() -> void:
 	enemies = _index_by_id(_load_csv(DATA_DIR + "enemies.csv"), "id")
 	equipment = _index_by_id(_load_csv(DATA_DIR + "equipment.csv"), "id")
 	items = _index_by_id(_load_csv(DATA_DIR + "items.csv"), "id")
+	status_effects = _index_by_id(_load_csv(DATA_DIR + "status_effects.csv"), "id")
 
 	# 等级表：以 level 建索引
 	for row in _load_csv(DATA_DIR + "levels.csv"):
@@ -69,9 +72,9 @@ func load_all() -> void:
 		var key: String = row["attacker_element"] + "|" + row["defender_element"]
 		elements[key] = float(row["multiplier"])
 
-	print("[DataManager] 加载完成  角色%d 技能%d 敌人%d 装备%d 消耗品%d 等级%d AI组%d 掉落组%d 元素%d" % [
+	print("[DataManager] 加载完成  角色%d 技能%d 敌人%d 装备%d 消耗品%d 状态%d 等级%d AI组%d 掉落组%d 元素%d" % [
 		characters.size(), skills.size(), enemies.size(), equipment.size(),
-		items.size(), levels.size(), enemy_ai.size(), drops.size(), elements.size(),
+		items.size(), status_effects.size(), levels.size(), enemy_ai.size(), drops.size(), elements.size(),
 	])
 
 
@@ -91,6 +94,10 @@ func get_equipment(id: String) -> Dictionary:
 
 func get_item(id: String) -> Dictionary:
 	return items.get(id, {})
+
+## 状态效果定义：{name, kind, value, desc}；不存在返回空字典
+func get_status(id: String) -> Dictionary:
+	return status_effects.get(id, {})
 
 func get_enemy_ai(enemy_id: String) -> Array:
 	return enemy_ai.get(enemy_id, [])

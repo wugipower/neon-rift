@@ -1,0 +1,8 @@
+id,name,kind,value,desc
+shock,感电,skip_chance,0.35,每回合35%概率跳过行动
+freeze,冰冻,spd_pct,-0.5,速度降低50%
+burn,灼烧,dot_pct,0.08,每回合损失8%最大生命
+atk_up,攻击提升,atk_pct,0.3,物理与异能攻击提升30%
+def_up,防御提升,def_pct,0.3,防御提升30%
+regen,回春,hot_pct,0.06,每回合回复6%最大生命
+shield,护盾,shield_pct,0.25,获得相当于25%最大生命的护盾

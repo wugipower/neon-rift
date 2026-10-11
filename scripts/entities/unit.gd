@@ -33,6 +33,10 @@ var mp: int = 0
 # 装备加成（P5 接入；此处预留，派生时叠加）
 var equip_bonus: Dictionary = {}
 
+# 状态效果（P5）：激活中的 StatusEffect 列表 + 护盾池
+var statuses: Array = []
+var shield: int = 0
+
 
 ## 从 characters.csv 的一行 + 等级，构建玩家角色单位
 static func from_character(row: Dictionary, lvl: int) -> Unit:
@@ -88,3 +92,103 @@ func recompute() -> void:
 
 func is_alive() -> bool:
 	return hp > 0
+
+
+# ---------- P5：状态效果 ----------
+
+## 累加某类状态的数值（同类可叠加，如两层灼烧）
+func _sum_kind(kind: String) -> float:
+	var total: float = 0.0
+	for s in statuses:
+		if s.kind == kind:
+			total += s.value
+	return total
+
+
+## 有效战斗属性 = 基础派生值 * (1 + 状态修正)
+func eff_atk() -> float:
+	return atk * (1.0 + _sum_kind("atk_pct"))
+
+func eff_matk() -> float:
+	return matk * (1.0 + _sum_kind("atk_pct"))
+
+func eff_def() -> float:
+	return def * (1.0 + _sum_kind("def_pct"))
+
+func eff_spd() -> float:
+	return spd * (1.0 + _sum_kind("spd_pct"))
+
+
+## 施加一个状态；同类已存在则刷新为较长回合数。返回是否成功施加。
+func apply_status(status_id: String, turns: int) -> bool:
+	if status_id == "" or status_id == "none":
+		return false
+	if DataManager.get_status(status_id).is_empty():
+		return false
+	for s in statuses:
+		if s.id == status_id:
+			s.turns_left = maxi(s.turns_left, maxi(1, turns))
+			return true
+	var s := StatusEffect.create(status_id, turns, hp_max)
+	if s == null:
+		return false
+	if s.kind == "shield_pct":
+		shield += s.shield_amount
+	statuses.append(s)
+	return true
+
+
+## 回合开始：先结算持续伤害(DoT)/持续治疗(HoT)。返回 {"dot":int,"hot":int}
+func on_turn_start() -> Dictionary:
+	var info := {"dot": 0, "hot": 0}
+	var dot: float = _sum_kind("dot_pct")
+	if dot > 0.0 and is_alive():
+		var dmg: int = maxi(1, int(round(hp_max * dot)))
+		hp = maxi(0, hp - dmg)
+		info["dot"] = dmg
+	var hot: float = _sum_kind("hot_pct")
+	if hot > 0.0 and is_alive():
+		var heal: int = int(round(hp_max * hot))
+		hp = mini(hp_max, hp + heal)
+		info["hot"] = heal
+	return info
+
+
+## 回合结束前递减所有状态回合数，移除到期状态。返回到期状态名列表。
+func tick_durations() -> Array:
+	var expired: Array = []
+	var keep: Array = []
+	for s in statuses:
+		s.turns_left -= 1
+		if s.turns_left <= 0:
+			if s.kind == "shield_pct":
+				shield = maxi(0, shield - s.shield_amount)
+			expired.append(s.effect_name)
+		else:
+			keep.append(s)
+	statuses = keep
+	return expired
+
+
+## 感电判定：是否因感电跳过本次行动
+func roll_skip() -> bool:
+	var c: float = _sum_kind("skip_chance")
+	return c > 0.0 and randf() < c
+
+
+## 承受伤害：先扣护盾再扣血。返回 {"absorbed":int,"hp_lost":int,"died":bool}
+func take_damage(amount: int) -> Dictionary:
+	var to_shield: int = mini(shield, amount)
+	shield -= to_shield
+	var to_hp: int = amount - to_shield
+	hp = maxi(0, hp - to_hp)
+	return {"absorbed": to_shield, "hp_lost": to_hp, "died": hp <= 0}
+
+
+## 当前状态名列表（供 UI 显示）
+func status_names() -> Array:
+	var out: Array = []
+	for s in statuses:
+		out.append("%s(%d)" % [s.effect_name, s.turns_left])
+	return out
+

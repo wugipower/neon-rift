@@ -7,7 +7,7 @@ extends RefCounted
 static func build_order(units: Array, jitter: bool = true) -> Array:
 	var keyed: Array = []
 	for u in units:
-		var key: float = float(u.spd) + (randf_range(0.0, 2.0) if jitter else 0.0)
+		var key: float = float(u.eff_spd()) + (randf_range(0.0, 2.0) if jitter else 0.0)
 		keyed.append({"u": u, "k": key})
 	# 按 key 降序
 	keyed.sort_custom(func(a, b): return a["k"] > b["k"])

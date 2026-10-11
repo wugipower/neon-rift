@@ -31,14 +31,14 @@ static func compute(attacker: Unit, defender: Unit, skill: Dictionary) -> Dictio
 
 	# 治疗：治疗量 = power * MATK，不受减伤影响
 	if dtype == "heal":
-		var amount: int = int(round(power * attacker.matk))
+		var amount: int = int(round(power * attacker.eff_matk()))
 		return {"hit": true, "damage": amount, "crit": false, "element_mult": 1.0,
 				"mitigation": 0.0, "is_heal": true, "raw": float(amount)}
 
 	# 伤害：护甲递减减伤
-	var atk_stat: float = attacker.atk if dtype == "physical" else attacker.matk
+	var atk_stat: float = attacker.eff_atk() if dtype == "physical" else attacker.eff_matk()
 	var k: float = 100.0 + 10.0 * float(attacker.level)
-	var mitigation: float = defender.def / (defender.def + k)
+	var mitigation: float = defender.eff_def() / (defender.eff_def() + k)
 	var element_mult: float = DataManager.get_element_multiplier(elem, defender.element)
 	var variance: float = randf_range(0.95, 1.05)
 	var is_crit: bool = randf() * 100.0 < attacker.crit
